@@ -29,6 +29,31 @@ UINT VLDGetLeaksCount()
     return -1;
 }
 
+UINT VLDReportLeaks()
+{
+    HMODULE vld_module = GetModuleHandle(sVld_dll);
+    if (vld_module != NULL)
+    {
+        typedef UINT(*VLDAPI_func)();
+        VLDAPI_func func = (VLDAPI_func)GetProcAddress(vld_module, "VLDReportLeaks");
+        assert(func);
+        if (func)
+        {
+            return func();
+        }
+    }
+    return -1;
+}
+
+void ExpectLeakCount(int expected, int actual)
+{
+    if (expected != actual)
+    {
+        VLDReportLeaks();
+    }
+    EXPECT_EQ(expected, actual);
+}
+
 HMODULE GetModuleFromAddress(LPCVOID pAddress)
 {
     HMODULE hModule = NULL;
@@ -46,17 +71,17 @@ TEST(TestUnloadDlls, Sequence1)
     ASSERT_EQ(NULL, GetModuleHandle(sVld_dll));
     HMODULE hModule1 = ::LoadLibrary(_T("vld_dll1.dll"));
     int w = VLDGetLeaksCount(); // vld is loaded and counts 1 memory leak
-    EXPECT_EQ(1, w);
+    ExpectLeakCount(1, w);
     ::FreeLibrary(hModule1);    // vld is unloaded here and reports the memory leak
     int x = VLDGetLeaksCount(); // vld is unloaded and cannot count any memory leaks
-    EXPECT_EQ(-1, x);
+    ExpectLeakCount(-1, x);
 
     HMODULE hModule2 = ::LoadLibrary(_T("vld_dll2.dll"));
     int y = VLDGetLeaksCount(); // vld is loaded and counts 1 memory leak
-    EXPECT_EQ(1, y);
+    ExpectLeakCount(1, y);
     ::FreeLibrary(hModule2);    // vld is unloaded here and reports the memory leak
     int z = VLDGetLeaksCount(); // vld is unloaded and cannot count any memory leaks
-    EXPECT_EQ(-1, z);
+    ExpectLeakCount(-1, z);
 }
 
 TEST(TestUnloadDlls, Sequence2)
@@ -64,24 +89,16 @@ TEST(TestUnloadDlls, Sequence2)
     ASSERT_EQ(NULL, GetModuleHandle(sVld_dll));
     HMODULE hModule3 = ::LoadLibrary(_T("vld_dll1.dll"));
     int w = VLDGetLeaksCount(); // vld is loaded and counts 1 memory leak
-    EXPECT_EQ(1, w);
+    ExpectLeakCount(1, w);
     HMODULE hModule4 = ::LoadLibrary(_T("vld_dll2.dll"));
     int x = VLDGetLeaksCount(); // vld is still loaded and counts 2 memory leaks
-    EXPECT_EQ(2, x);
+    ExpectLeakCount(2, x);
     ::FreeLibrary(hModule4);    // vld is *not* unloaded here
     int y = VLDGetLeaksCount();
-#if _MSC_VER <= 1600 && !defined(_DLL) // VS 2010 and bellow
-    // The reason for reporting 1 leak at this point is that the vld_dll1 module build with <VS2013 calls internally
-    // HeapDestroy when it unloads and the leak is either
-    // - reported automatically by VLD when the Heap is destroyed if VLD_OPT_SKIP_HEAPFREE_LEAKS was specified or
-    // - ignored since the destroyed Heap was removed from VLD heap map.
-    EXPECT_EQ(1, y); // vld is still loaded and counts 1 memory leaks
-#else
-    EXPECT_EQ(2, y); // vld is still loaded and counts 2 memory leaks
-#endif
+    ExpectLeakCount(2, y); // vld is still loaded and counts 2 memory leaks
     ::FreeLibrary(hModule3);    // vld is unloaded here and reports 2 memory leaks
     int z = VLDGetLeaksCount(); // vld is unloaded and cannot count any memory leaks
-    EXPECT_EQ(-1, z);
+    ExpectLeakCount(-1, z);
 }
 
 TEST(TestUnloadDlls, Sequence3)
@@ -89,24 +106,16 @@ TEST(TestUnloadDlls, Sequence3)
     ASSERT_EQ(NULL, GetModuleHandle(sVld_dll));
     HMODULE hModule5 = ::LoadLibrary(_T("vld_dll1.dll"));
     int w = VLDGetLeaksCount(); // vld is loaded and counts 1 memory leak
-    EXPECT_EQ(1, w);
+    ExpectLeakCount(1, w);
     HMODULE hModule6 = ::LoadLibrary(_T("vld_dll2.dll"));
     int x = VLDGetLeaksCount(); // vld is still loaded and counts 2 memory leaks
-    EXPECT_EQ(2, x);
+    ExpectLeakCount(2, x);
     ::FreeLibrary(hModule5);    // vld is *not* unloaded here
     int y = VLDGetLeaksCount(); // vld is still loaded and counts 2 memory leaks
-#if _MSC_VER <= 1600 && !defined(_DLL) // VS 2010 and bellow
-    // The reason for reporting 1 leak at this point is that the vld_dll1 module build with <VS2013 calls internally
-    // HeapDestroy when it unloads and the leak is either
-    // - reported automatically by VLD when the Heap is destroyed if VLD_OPT_SKIP_HEAPFREE_LEAKS was specified or
-    // - ignored since the destroyed Heap was removed from VLD heap map.
-    EXPECT_EQ(1, y); // vld is still loaded and counts 1 memory leaks
-#else
-    EXPECT_EQ(2, y); // vld is still loaded and counts 2 memory leaks
-#endif
+    ExpectLeakCount(2, y); // vld is still loaded and counts 2 memory leaks
     ::FreeLibrary(hModule6);    // vld is unloaded here and reports 2 memory leaks
     int z = VLDGetLeaksCount(); // vld is unloaded and cannot count any memory leaks
-    EXPECT_EQ(-1, z);
+    ExpectLeakCount(-1, z);
 }
 
 TEST(TestUnloadDlls, Sequence4)
@@ -124,13 +133,13 @@ TEST(TestUnloadDlls, Sequence4)
 
     HMODULE hModule7 = ::LoadLibrary(_T("vld_dll1.dll"));
     int w = VLDGetLeaksCount(); // vld is loaded and counts 1 memory leak
-
+    ExpectLeakCount(1, w);
                                 // pGetProcAddress2 resolves to vld_xXX.dll!VisualLeakDetector::_GetProcAddress()
     GetProcAddress_t pGetProcAddress2 = GetProcAddress;
 
     ::FreeLibrary(hModule7);    // vld is unloaded here and reports the memory leak
     int x = VLDGetLeaksCount(); // vld is unloaded and cannot count any memory leaks
-
+    ExpectLeakCount(-1, x);
                                 //assert(pGetProcAddress1 == pGetProcAddress2);
     //GetProcAddress_t pGetProcAddress3 = (GetProcAddress_t)pGetProcAddress1(kernel32, "GetProcAddress");
 

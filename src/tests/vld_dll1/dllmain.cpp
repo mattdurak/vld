@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <string>
+
+// Here we static initialize a string within the DLL
+// Previous versions of VLD would flag this as a leak, make sure it does not
+static std::string my_string("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+
 BOOL APIENTRY DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
     LPVOID lpReserved

@@ -34,11 +34,7 @@ TEST(TestWinMain, RunExe)
     // Close the handles.
     CloseHandle(processInformation.hProcess);
     CloseHandle(processInformation.hThread);
-#if _MSC_VER > 1700
-    ASSERT_EQ(9, exitCode);
-#else
-    ASSERT_EQ(8, exitCode);
-#endif
+    ASSERT_EQ(2, exitCode);
 }
 
 int _tmain(int argc, _TCHAR* argv[])
