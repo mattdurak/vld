@@ -328,7 +328,6 @@ bool IsWindows7OrGreater()
     return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WIN7), LOBYTE(_WIN32_WINNT_WIN7), 0);
 }
 
-#define _WIN32_WINNT_WIN8 0x0602
 bool IsWindows8OrGreater()
 {
     return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WIN8), LOBYTE(_WIN32_WINNT_WIN8), 0);
@@ -400,9 +399,9 @@ VisualLeakDetector::VisualLeakDetector ()
     }
 
     // Initialize global variables.
-    g_currentProcess    = GetCurrentProcess();
-    g_currentThread     = GetCurrentThread();
-    g_processHeap       = GetProcessHeap();
+    g_currentProcess = GetCurrentProcess();
+    g_currentThread = GetCurrentThread();
+    g_processHeap = GetProcessHeap();
 
     LoaderLock ll;
 
@@ -764,7 +763,7 @@ UINT32 VisualLeakDetector::getModuleState(ModuleSet::Iterator& it, UINT32& modul
 }
 
 // dbghelp32.dll should be updated in setup folder if you update dbghelp.h
-static char dbghelp32_assert[sizeof(IMAGEHLP_MODULE64) == 3256 ? 1 : -1];
+static char dbghelp32_assert[sizeof(IMAGEHLP_MODULE64) == 3264 ? 1 : -1];
 
 // attachtoloadedmodules - Attaches VLD to all modules contained in the provided
 //   ModuleSet. Not all modules are in the ModuleSet will actually be included
@@ -972,11 +971,12 @@ LPWSTR VisualLeakDetector::buildSymbolSearchPath ()
         delete [] env;
     }
 
-#if _MSC_VER > 1900
+#if _MSC_VER > 2000
 #error Not supported VS
 #endif
     // Append Visual Studio 2015/2013/2012/2010/2008 symbols cache directory.
-    for (UINT n = 9; n <= 14; ++n) {
+    // NOTE: This does not seem to exist for VS 2019 on Windows 10, but leaving it as is for now, updated to 2019 (changed 14->16)
+    for (UINT n = 9; n <= 16; ++n) {
         WCHAR debuggerpath[MAX_PATH] = { 0 };
         swprintf(debuggerpath, _countof(debuggerpath), L"Software\\Microsoft\\VisualStudio\\%u.0\\Debugger", n);
         HKEY debuggerkey;

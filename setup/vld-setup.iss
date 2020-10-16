@@ -2,10 +2,12 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Visual Leak Detector"
-#define MyAppVersion "2.5.1"
+#define MyAppVersion "2.5.4"
 #define MyAppPublisher "VLD Team"
 #define MyAppURL "http://vld.codeplex.com/"
 #define MyAppRegKey "Software\Visual Leak Detector"
+#define ConfigType "Release"
+#define PlatformVersion "v142"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -45,18 +47,20 @@ Source: "dbghelp\x64\dbghelp.dll"; DestDir: "{app}\bin\Win64"; Flags: ignorevers
 Source: "dbghelp\x64\Microsoft.DTfW.DHL.manifest"; DestDir: "{app}\bin\Win64"; Flags: ignoreversion
 Source: "dbghelp\x86\dbghelp.dll"; DestDir: "{app}\bin\Win32"; Flags: ignoreversion
 Source: "dbghelp\x86\Microsoft.DTfW.DHL.manifest"; DestDir: "{app}\bin\Win32"; Flags: ignoreversion
-Source: "..\src\bin\Win32\Release-v140\vld.lib"; DestDir: "{app}\lib\Win32"; Flags: ignoreversion
-Source: "..\src\bin\Win32\Release-v140\vld_x86.dll"; DestDir: "{app}\bin\Win32"; Flags: ignoreversion
-Source: "..\src\bin\Win32\Release-v140\vld_x86.pdb"; DestDir: "{app}\bin\Win32"; Flags: ignoreversion
-Source: "..\src\bin\x64\Release-v140\vld.lib"; DestDir: "{app}\lib\Win64"; Flags: ignoreversion
-Source: "..\src\bin\x64\Release-v140\vld_x64.dll"; DestDir: "{app}\bin\Win64"; Flags: ignoreversion
-Source: "..\src\bin\x64\Release-v140\vld_x64.pdb"; DestDir: "{app}\bin\Win64"; Flags: ignoreversion
+Source: "..\src\bin\Win32\{#ConfigType}-{#PlatformVersion}\vld.lib"; DestDir: "{app}\lib\Win32"; Flags: ignoreversion
+Source: "..\src\bin\Win32\{#ConfigType}-{#PlatformVersion}\vld_x86.dll"; DestDir: "{app}\bin\Win32"; Flags: ignoreversion
+Source: "..\src\bin\Win32\{#ConfigType}-{#PlatformVersion}\vld_x86.pdb"; DestDir: "{app}\bin\Win32"; Flags: ignoreversion
+Source: "..\src\bin\x64\{#ConfigType}-{#PlatformVersion}\vld.lib"; DestDir: "{app}\lib\Win64"; Flags: ignoreversion
+Source: "..\src\bin\x64\{#ConfigType}-{#PlatformVersion}\vld_x64.dll"; DestDir: "{app}\bin\Win64"; Flags: ignoreversion
+Source: "..\src\bin\x64\{#ConfigType}-{#PlatformVersion}\vld_x64.pdb"; DestDir: "{app}\bin\Win64"; Flags: ignoreversion
 Source: "..\src\vld.h"; DestDir: "{app}\include"; Flags: ignoreversion
 Source: "..\src\vld_def.h"; DestDir: "{app}\include"; Flags: ignoreversion
 Source: "..\vld.ini"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\AUTHORS.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\CHANGES.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\COPYING.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Microsoft.Cpp.Win32.user.props"; DestDir: "{localappdata}\Microsoft\MSBuild\v4.0\"; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "Microsoft.Cpp.x64.user.props"; DestDir: "{localappdata}\Microsoft\MSBuild\v4.0\"; Flags: onlyifdoesntexist uninsneveruninstall
 
 [Tasks]
 Name: "modifypath"; Description: "Add VLD directory to your environmental path"
@@ -439,6 +443,9 @@ begin
   begin
     if not UninstallOldVersions() then
       Abort();
+  end;
+  if CurStep = ssPostInstall then
+  begin
     if IsTaskSelected('modifyVS2008Props') then
       ModifyVS2008Settings();
     if IsTaskSelected('modifyVS2010Props') then
@@ -455,7 +462,7 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
- 
+
   if CurPageID = wpReady then
     SuppressibleMsgBox('Please close Visual Studio before starting the installation.', mbInformation, MB_OK, IDOK);
 end;

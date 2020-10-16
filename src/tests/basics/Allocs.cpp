@@ -8,6 +8,8 @@
 #include <tchar.h>
 #include <sstream>
 #include <algorithm>
+#include <locale>
+#include <codecvt>
 
 #include <gtest/gtest.h>
 
@@ -31,7 +33,7 @@
 #define CRTDLLNAME   _T("msvcr110d.dll")
 #elif _MSC_VER == 1800	// VS 2013
 #define CRTDLLNAME   _T("msvcr120d.dll")
-#elif _MSC_VER == 1900	// VS 2015
+#elif _MSC_VER >= 1900	// VS 2015, 2017, 2019
 #define CRTDLLNAME   _T("ucrtbased.dll")
 #else
 #error Unsupported compiler
@@ -55,7 +57,7 @@
 #define CRTDLLNAME   _T("msvcr110.dll")
 #elif _MSC_VER == 1800	// VS 2013
 #define CRTDLLNAME   _T("msvcr120.dll")
-#elif _MSC_VER == 1900	// VS 2015
+#elif _MSC_VER >= 1900	// VS 2015, 2017, 2019
 #define CRTDLLNAME   _T("ucrtbase.dll")
 #else
 #error Unsupported compiler
@@ -71,7 +73,7 @@ private:
     void* l;
 };
 
-static MemoryLeak ml; 
+static MemoryLeak ml;
 
 typedef void* (__cdecl *free_t) (void* mem);
 typedef void* (__cdecl *malloc_t) (size_t size);
@@ -98,7 +100,8 @@ static const int recursion = 3;
             return ::testing::AssertionFailure()
                 << resultStream.str() << actual_expr << " contain less lines than " << expected_expr << "";
         }
-        std::string actualLine(wactualLine.begin(), wactualLine.end());
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        std::string actualLine(converter.to_bytes(wactualLine));
         std::transform(actualLine.begin(), actualLine.end(), actualLine.begin(), ::tolower);
         if (!RE::FullMatch(actualLine, RE(expectedLine)))
         {

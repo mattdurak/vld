@@ -1024,64 +1024,6 @@ BOOL StrToBool (LPCWSTR s) {
     }
 }
 
-// _GetProcessIdOfThread - Returns the ID of the process owns the thread.
-//
-//  - thread (IN): The handle to the thread.
-//
-//  Return Value:
-//
-//    Returns the ID of the process that owns the thread. Otherwise returns 0.
-//
-DWORD _GetProcessIdOfThread (HANDLE thread)
-{
-    typedef struct _CLIENT_ID {
-        HANDLE UniqueProcess;
-        HANDLE UniqueThread;
-    } CLIENT_ID, *PCLIENT_ID;
-
-    typedef LONG NTSTATUS;
-    typedef LONG KPRIORITY;
-
-    typedef struct _THREAD_BASIC_INFORMATION {
-        NTSTATUS  ExitStatus;
-        PVOID     TebBaseAddress;
-        CLIENT_ID ClientId;
-        KAFFINITY AffinityMask;
-        KPRIORITY Priority;
-        KPRIORITY BasePriority;
-    } THREAD_BASIC_INFORMATION, *PTHREAD_BASIC_INFORMATION;
-
-    const static THREADINFOCLASS ThreadBasicInformation = (THREADINFOCLASS)0;
-
-    typedef NTSTATUS (WINAPI *PNtQueryInformationThread) (HANDLE thread,
-        THREADINFOCLASS infoclass, PVOID buffer, ULONG buffersize,
-        PULONG used);
-
-    static PNtQueryInformationThread NtQueryInformationThread = NULL;
-
-    THREAD_BASIC_INFORMATION tbi;
-    NTSTATUS status;
-    if (NtQueryInformationThread == NULL) {
-        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-        if (ntdll)
-        {
-            NtQueryInformationThread = (PNtQueryInformationThread)GetProcAddress(ntdll, "NtQueryInformationThread");
-        }
-
-        if (NtQueryInformationThread == NULL) {
-            return 0;
-        }
-    }
-
-    status = NtQueryInformationThread(thread, ThreadBasicInformation, &tbi, sizeof(tbi), NULL);
-    if(status < 0) {
-        // Shall we go through all the trouble of setting last error?
-        return 0;
-    }
-
-    return (DWORD)tbi.ClientId.UniqueProcess;
-}
-
 static const DWORD crctab[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -1171,14 +1113,22 @@ void GetFormattedMessage(DWORD last_error)
 //
 //    Module handle.
 //
-HMODULE GetCallingModule( UINT_PTR pCaller )
+HMODULE GetCallingModule(UINT_PTR pCaller )
 {
     HMODULE hModule = NULL;
-    MEMORY_BASIC_INFORMATION mbi;
-    if ( VirtualQuery((LPCVOID)pCaller, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) == sizeof(MEMORY_BASIC_INFORMATION) )
+
+    /*MEMORY_BASIC_INFORMATION mbi;
+    if (VirtualQuery((LPCVOID)pCaller, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) == sizeof(MEMORY_BASIC_INFORMATION))
     {
         // the allocation base is the beginning of a PE file
-        hModule = (HMODULE) mbi.AllocationBase;
+        hModule = (HMODULE)mbi.AllocationBase;
+    }*/
+
+    WIN32_MEMORY_REGION_INFORMATION memoryRegionInfo;
+    if ( QueryVirtualMemoryInformation(GetCurrentProcess(), (LPCVOID)pCaller, MemoryRegionInfo, &memoryRegionInfo, sizeof(memoryRegionInfo), NULL) )
+    {
+        // the allocation base is the beginning of a PE file
+        hModule = (HMODULE)memoryRegionInfo.AllocationBase;
     }
     return hModule;
 }
